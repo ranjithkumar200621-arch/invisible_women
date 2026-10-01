@@ -182,7 +182,7 @@ export async function processMessage(
 /**
  * Extract facts using keyword matching as fallback.
  */
-function extractWithKeywords(
+export function extractWithKeywords(
   message: string,
   currentSchemeId: string | null,
   language: string
@@ -247,15 +247,28 @@ function extractWithKeywords(
 
   // Determine intent
   let intent: string = 'eligibility';
+  
+  // Check for women's assistance request - guide toward current scheme or find_scheme
+  if (msgLower.includes('பெண்குக்கான') || msgLower.includes('பெண்களுக்கான') || msgLower.includes('பெண் திட்ட') || msgLower.includes('women') || msgLower.includes('பெண் உதவி')) {
+    if (currentSchemeId) {
+      intent = 'eligibility';
+    } else {
+      intent = 'find_scheme';
+    }
+  }
+  
   if (msgLower.includes('வீடு') || msgLower.includes('house') || msgLower.includes('housing') || msgLower.includes('திட்ட')) {
     if (!currentSchemeId) {
       intent = 'find_scheme';
     }
   }
 
-  // Generate next question
+  // Generate next question - don't ask "which scheme" if they're asking about assistance
   let nextQuestion = '';
-  if (Object.keys(extractedFacts).length === 0) {
+  if (intent === 'find_scheme' && Object.keys(extractedFacts).length === 0 && 
+      !msgLower.includes('பெண்குக்கான') && !msgLower.includes('பெண்களுக்கான') && 
+      !msgLower.includes('பெண் திட்ட') && !msgLower.includes('women') && 
+      !msgLower.includes('பெண் உதவி')) {
     nextQuestion = language === 'ta'
       ? 'எந்த திட்டத்தைப் பற்றி கேள்வி கேக்கிறீர்கள்?'
       : 'Which scheme are you asking about?';

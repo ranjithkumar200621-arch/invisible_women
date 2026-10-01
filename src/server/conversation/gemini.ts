@@ -10,12 +10,12 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 /**
  * Gemini model for structured extraction (JSON mode).
  */
-const EXTRACT_MODEL = 'gemini-1.5-flash';
+const EXTRACT_MODEL = 'gemini-3.8-flash';
 
 /**
  * Gemini model for composition (text generation).
  */
-const COMPOSE_MODEL = 'gemini-1.5-flash';
+const COMPOSE_MODEL = 'gemini-3.8-flash';
 
 /**
  * Schema for Gemini structured extraction ResponseFormat.
@@ -177,7 +177,7 @@ export async function extractIntentAndFacts(
   IMPORTANT: Return ONLY valid JSON, no additional text.`;
 
   try {
-    const response = await fetch('https://generativelanguages.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
+    const response = await fetch('https://generativelanguages.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + GEMINI_API_KEY, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -265,7 +265,7 @@ export async function composeResponse(
   Return ONLY the response text, no JSON.`;
 
   try {
-    const response = await fetch('https://generativelanguages.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
+    const response = await fetch('https://generativelanguages.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' + GEMINI_API_KEY, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

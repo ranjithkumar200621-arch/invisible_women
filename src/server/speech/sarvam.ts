@@ -5,14 +5,20 @@
  * - Speech-to-text (ASR): audio → transcript
  * - Text-to-speech (TTS): text → audio
  *
- * Sarvam API docs: https://docs.sarvam.ai/
+ * API References:
+ * - ASR: https://docs.sarvam.ai/api-reference/speech-to-text/transcribe
+ * - TTS: https://docs.sarvam.ai/api-reference/text-to-speech/convert
  */
 
 const SARVAM_API_KEY = process.env.SARVAM_API_KEY || '';
 
-// Sarvam API endpoints
-const ASR_ENDPOINT = 'https://api.sarvam.ai/v1/speech-to-text';
-const TTS_ENDPOINT = 'https://api.sarvam.ai/v1/text-to-speech';
+// Sarvam API endpoints (CORRECT endpoints from official docs)
+const ASR_ENDPOINT = 'https://api.sarvam.ai/speech-to-text';
+const TTS_ENDPOINT = 'https://api.sarvam.ai/text-to-speech';
+
+// Sarvam models
+const ASR_MODEL = 'saaras:v4';
+const TTS_MODEL = 'bulbul:v3';
 
 export interface SarvamASROptions {
   audioBase64: string;
@@ -28,8 +34,7 @@ export interface SarvamTTSPayload {
   text: string;
   languageCode: string; // e.g., 'ta-IN', 'hi-IN', 'te-IN'
   speaker?: string; // voice name
-  pitch?: number;
-  rate?: number;
+  pace?: number;
 }
 
 export interface SarvamTTSOutput {
@@ -39,13 +44,14 @@ export interface SarvamTTSOutput {
 
 /**
  * Speech-to-text: Convert audio to transcript
+ * Uses multipart/form-data with file upload (Sarvam API requirement)
  */
 export async function speechToText(options: SarvamASROptions): Promise<SarvamASROutput> {
   if (!SARVAM_API_KEY) {
     throw new Error('SARVAM_API_KEY environment variable is required');
   }
 
-  // Map language codes to Sarvam format
+  // Map language codes to Sarvam BCP-47 format
   const sarvamLanguageMap: Record<string, string> = {
     'ta': 'ta-IN',
     'hi': 'hi-IN',
@@ -62,18 +68,28 @@ export async function speechToText(options: SarvamASROptions): Promise<SarvamASR
 
   const sarvamLanguage = sarvamLanguageMap[options.languageCode] || 'ta-IN';
 
+  // Convert base64 to blob for multipart upload
+  const binaryString = atob(options.audioBase64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const audioBlob = new Blob([bytes], { type: 'audio/webm' });
+
+  // Create multipart form data
+  const formData = new FormData();
+  formData.append('file', audioBlob, 'audio.webm');
+  formData.append('model', ASR_MODEL);
+  formData.append('language_code', sarvamLanguage);
+
   try {
     const response = await fetch(ASR_ENDPOINT, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${SARVAM_API_KEY}`,
-        'Content-Type': 'application/json',
+        'api-subscription-key': SARVAM_API_KEY, // Correct header for Sarvam
       },
-      body: JSON.stringify({
-        audio_base64: options.audioBase64,
-        model: 'paaraa-1.0',
-        language_code: sarvamLanguage,
-      }),
+      body: formData,
     });
 
     if (!response.ok) {
@@ -86,7 +102,7 @@ export async function speechToText(options: SarvamASROptions): Promise<SarvamASR
     
     // Parse response - adjust based on actual Sarvam API response format
     const transcript = data.transcript || data.text || '';
-    
+
     return {
       transcript,
       confidence: data.confidence || 0.9,
@@ -105,7 +121,7 @@ export async function textToSpeech(payload: SarvamTTSPayload): Promise<SarvamTTS
     throw new Error('SARVAM_API_KEY environment variable is required');
   }
 
-  // Map language codes to Sarvam format
+  // Map language codes to Sarvam BCP-47 format
   const sarvamLanguageMap: Record<string, string> = {
     'ta': 'ta-IN',
     'hi': 'hi-IN',
@@ -122,7 +138,7 @@ export async function textToSpeech(payload: SarvamTTSPayload): Promise<SarvamTTS
 
   const sarvamLanguage = sarvamLanguageMap[payload.languageCode] || 'ta-IN';
 
-  // Map language to speaker
+  // Map language to speaker (for bulbul:v3)
   const speakerMap: Record<string, string> = {
     'ta': 'priya',
     'hi': 'neha',
@@ -137,23 +153,21 @@ export async function textToSpeech(payload: SarvamTTSPayload): Promise<SarvamTTS
     'or': 'smriti',
   };
 
-  const speaker = payload.speaker || speakerMap[payload.languageCode] || 'priya';
+  const speaker = payload.speaker || speakerMap[payload.languageCode] || 'shubh';
 
   try {
     const response = await fetch(TTS_ENDPOINT, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${SARVAM_API_KEY}`,
+        'api-subscription-key': SARVAM_API_KEY, // Correct header for Sarvam
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         text: payload.text,
-        model: 'saarva-1.0',
+        model: TTS_MODEL,
         language_code: sarvamLanguage,
         speaker,
-        pitch: payload.pitch ?? 1,
-        rate: payload.rate ?? 1,
-        output_format: 'mp3',
+        pace: payload.pace ?? 1,
       }),
     });
 
@@ -166,8 +180,8 @@ export async function textToSpeech(payload: SarvamTTSPayload): Promise<SarvamTTS
     const data = await response.json();
     
     // Parse response - adjust based on actual Sarvam API response format
-    const audioBase64 = data.audio_base64 || data.audio || '';
-    
+    const audioBase64 = data.audios?.[0] || data.audio_base64 || data.audio || '';
+
     return {
       audioBase64,
       mimeType: 'audio/mp3',

@@ -289,3 +289,34 @@ describe('Eligibility Engine', () => {
     });
   });
 });
+
+/**
+ * Regression tests for conversation flow with Tamil input
+ */
+
+import type { ConversationState } from '@/src/types/conversation';
+import type { ChatResponse } from '@/src/server/conversation/types';
+
+describe('Conversation Flow - Tamil Input Tests', () => {
+  describe('broad women assistance request', () => {
+    it('should not ask "which scheme" for women assistance request', async () => {
+      const { processMessage } = await import('@/src/server/conversation/service');
+      
+      // This is the exact Tamil input that was failing
+      const userMessage = "எனக்கு பெண்களுக்கான அரசு உதவித் திட்டம் வேண்டும்.";
+      
+      // Process with a test session
+      const response = await processMessage('test-regression-001', userMessage, 'ta');
+      
+      // The response should NOT be the "which scheme" question
+      const isSchemeClarification = response.response.includes('எந்த திட்டத்தைப் பற்றி') || 
+                                     response.response.includes('Which scheme');
+      
+      expect(isSchemeClarification).toBe(false);
+      
+      // The conversation should move toward eligibility (not stuck asking for scheme name)
+      // The key is that nextQuestion or response should be about eligibility facts, not scheme name
+      expect(response.status).toBeOneOf(['needs_information', 'eligible', 'not_eligible', 'undetermined']);
+    });
+  });
+});
