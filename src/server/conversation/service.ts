@@ -11,7 +11,7 @@ import type {
   ChatResponse,
 } from './types';
 import type { LanguageCode } from '@/src/types/language';
-import { extractIntentAndFacts } from './gemini';
+import { extractIntentAndFacts } from './bedrock';
 
 // Load scheme from data file
 import schemeData from '@/data/example-scheme.json';
@@ -86,6 +86,7 @@ export async function processMessage(
       state: { ...state },
       status: 'needs_information',
     };
+    saveSession(sessionId, state);
   }
 
   let extractedFacts: Record<string, any> = {};
@@ -124,6 +125,9 @@ export async function processMessage(
 
   // Merge extracted facts into state
   state = mergeFacts(state, extractedFacts);
+
+  // Persist the updated state back to the session
+  saveSession(sessionId, state);
 
   // Run eligibility engine
   const engineResult = evaluateEligibility(state.facts, state.scheme as any);
