@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "schemeId": "makm-tamil-nadu-2024",
+  "version": 1,
+  "status": "active",
+  
+  "name": "Mukhyamantri Amath Kaumudi Yojana",
+  "localizedNames": {
+    "ta": "முख்யமந்திரி அமாத் கவுமுதி திட்டம்",
+    "hi": "मुख्यमंत्री अमात हौमड़ू योजना",
+    "te": "ముఖ్త్యంత్రి అమాత్ కౌముది పథకం"
+  },
+  "shortDescription": "Annual financial assistance of ₹12,500 to women aged 45-60 in Tamil Nadu.",
+  "description": "A government scheme providing annual financial assistance of ₹12,500 to women between 45-60 years of age in Tamil Nadu. The scheme aims to provide support to women during their golden years.",
+  "tags": [
+    "women assistance",
+    "tamil Nadu women scheme",
+    "old age support",
+    "women welfare",
+    "financial assistance",
+    "amath kaumudi"
+  ],
+  
+  "jurisdiction": {
+    "level": "state",
+    "stateCode": "TN",
+    "stateName": "Tamil Nadu"
+  },
+  "sourceOrganization": "Tamil Nadu Social Welfare and Nutritious Meal Program Department",
+  "officialUrl": "https://socialwelfare.tn.gov.in/",
+  
+  "benefits": [
+    {
+      "id": "B1",
+      "text": "Annual financial assistance of ₹12,500",
+      "amount": { "value": 12500, "currency": "INR", "frequency": "yearly" }
+    }
+  ],
+  
+  "documents": [
+    "Aadhaar card (proof of identity and address)",
+    "Proof of age (birth certificate or SSLC mark sheet)",
+    "Tamil Nadu resident proof (ration card or voter ID)",
+    "Bank account passbook (for direct benefit transfer)",
+    "Income certificate (if applicable)"
+  ],
+  
+  "eligibility": {
+    "askOrder": ["state", "age", "is_woman"],
+    "rules": {
+      "type": "group",
+      "id": "R_ROOT",
+      "combinator": "all",
+      "reasonCode": "NOT_ELIGIBLE",
+      "description": "All of the following must be true.",
+      "rules": [
+        {
+          "type": "leaf",
+          "id": "R_STATE",
+          "field": "state",
+          "operator": "eq",
+          "value": "TN",
+          "reasonCode": "STATE_NOT_COVERED",
+          "description": "Applicant must be a resident of Tamil Nadu.",
+          "sourceRef": "mukhyamantri-amath-kaumudi-official"
+        },
+        {
+          "type": "leaf",
+          "id": "R_AGE_MIN",
+          "field": "age",
+          "operator": "gte",
+          "value": 45,
+          "reasonCode": "AGE_BELOW_MINIMUM",
+          "description": "Applicant must be at least 45 years old.",
+          "sourceRef": "mukhyamantri-amath-kaumudi-official"
+        },
+        {
+          "type": "leaf",
+          "id": "R_AGE_MAX",
+          "field": "age",
+          "operator": "lte",
+          "value": 60,
+          "reasonCode": "AGE_ABOVE_MAXIMUM",
+          "description": "Applicant must be 60 years or younger.",
+          "sourceRef": "mukhyamantri-amath-kaumudi-official"
+        },
+        {
+          "type": "leaf",
+          "id": "R_IS_WOMAN",
+          "field": "is_woman",
+          "operator": "is_true",
+          "reasonCode": "NOT_A_WOMAN",
+          "description": "Applicant must be a woman.",
+          "sourceRef": "mukhyamantri-amath-kaumudi-official"
+        }
+      ]
+    }
+  },
+  
+  "applicationSteps": [
+    "Visit the nearest Social Welfare Office or Women and Child Development Office in yourtaluk.",
+ 
+    "Obtain the application form from the office or download from the official website.",
+    "Fill in the application form with correct details.",
+    "Attach all required documents (photocopies valid).",
+    "Submit the application to the concerned office.",
+    "Wait for verification and approval (usually 30-45 days).",
+    "If approved, amount will be credited to your bank account."
+  ],
+  
+  "verificationDate": "2024-10-01",
+  "verificationSource": "Tamil Nadu Social Welfare Department official guidelines"
+}
