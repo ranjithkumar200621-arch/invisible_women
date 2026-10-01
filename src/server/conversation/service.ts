@@ -46,8 +46,6 @@ export function loadSession(sessionId: string): ConversationState {
  */
 
 export function saveSession(sessionId: string, state: ConversationState): void {
-  console.log('[LOG] saveSession: Saving session', sessionId);
-  console.log('[LOG] saveSession: state.facts =', JSON.stringify(state.facts));
   sessions[sessionId] = state;
 }
 
@@ -85,6 +83,7 @@ export async function processMessage(
       missingFields: [],
       lastEligibility: null,
     };
+    saveSession(sessionId, state);
     return {
       response: language === 'ta' ? 'தொடங்குகிறோம்!' : 'Let us start!',
       state: { ...state },
@@ -99,8 +98,6 @@ export async function processMessage(
 
 
     // LOGGING: Check if AWS_BEARER_TOKEN_BEDROCK is set
-    console.log('[LOG] processMessage: Checking AWS_BEARER_TOKEN_BEDROCK environment variable...');
-    console.log('[LOG] processMessage: AWS_BEARER_TOKEN_BEDROCK configured:', !!process.env.AWS_BEARER_TOKEN_BEDROCK);
   // Try Gemini extraction if API key is configured
   try {
     if (process.env.AWS_BEARER_TOKEN_BEDROCK) {
@@ -112,9 +109,6 @@ export async function processMessage(
 
       intent = geminiResult.intent;
       extractedFacts = geminiResult.extractedFacts;
-console.log('[LOG] processMessage: extractIntentAndFacts() returned:');
-      console.log('[LOG] processMessage: intent =', intent);
-      console.log('[LOG] processMessage: extractedFacts =', JSON.stringify(extractedFacts));
 
       responseText = geminiResult.response;
       nextQuestion = geminiResult.nextQuestion;
