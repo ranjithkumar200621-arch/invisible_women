@@ -90,7 +90,6 @@ export async function processMessage(
       state: { ...state },
       status: 'needs_information',
     };
-    saveSession(sessionId, state);
   }
 
   let extractedFacts: Record<string, any> = {};
