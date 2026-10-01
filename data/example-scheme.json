@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "schemeId": "example-housing-001",
+  "version": 1,
+  "status": "draft",
+
+  "name": "Example Housing Assistance Scheme (FIXTURE - NOT A REAL SCHEME)",
+  "localizedNames": {
+    "ta": "எடுத்துக்காட்டு வீட்டு உதவித் திட்டம் (மாதிரி மட்டும்)",
+    "hi": "उदाहरण आवास सहायता योजना (केवल नमूना)",
+    "te": "ఉదాహరణ గృహ సహాయ పథకం (నమూనా మాత్రమే)"
+  },
+  "shortDescription": "Financial help for eligible low-income women to build or repair a house.",
+  "description": "This is a made-up scheme used only to test the system. It gives a one-time grant to eligible low-income households in one state to build a basic house. Real schemes must replace this file.",
+  "tags": ["housing", "house", "build a house", "home construction", "shelter", "government help for house"],
+
+  "jurisdiction": { "level": "state", "stateCode": "TN" },
+  "sourceOrganization": "Example Department of Housing (fictional)",
+
+  "benefits": [
+    {
+      "id": "B1",
+      "text": "A one-time grant towards building a basic house.",
+      "amount": { "value": 150000, "currency": "INR", "frequency": "one_time" }
+    }
+  ],
+
+  "eligibility": {
+    "rules": {
+      "type": "group",
+      "id": "R_ROOT",
+      "combinator": "all",
+      "reasonCode": "NOT_ELIGIBLE",
+      "description": "All of the following must be true.",
+      "rules": [
+        {
+          "type": "leaf", "id": "R_STATE", "field": "state", "operator": "eq", "value": "TN",
+          "reasonCode": "STATE_NOT_COVERED",
+          "description": "Applicant must live in Tamil Nadu.",
+          "sourceRef": "FIXTURE"
+        },
+        {
+          "type": "leaf", "id": "R_AGE_MIN", "field": "age", "operator": "gte", "value": 18,
+          "reasonCode": "AGE_BELOW_MINIMUM",
+          "description": "Applicant must be at least 18 years old.",
+          "sourceRef": "FIXTURE"
+        },
+        {
+          "type": "leaf", "id": "R_NO_HOUSE", "field": "owns_house", "operator": "is_false",
+          "reasonCode": "ALREADY_OWNS_HOUSE",
+          "description": "Household must not already own a house.",
+          "sourceRef": "FIXTURE"
+        },
+        {
+          "type": "leaf", "id": "R_INCOME_MAX", "field": "annual_income", "operator": "lte", "value": 300000,
+          "reasonCode": "INCOME_ABOVE_LIMIT",
+          "description": "Annual household income must be at most 3,00,000 rupees.",
+          "sourceRef": "FIXTURE"
+        },
+        {
+          "type": "group", "id": "R_PRIORITY", "combinator": "any",
+          "reasonCode": "PRIORITY_CATEGORY_NOT_MET",
+          "description": "Applicant must be widowed/divorced/separated OR have annual household income of at most 1,20,000 rupees.",
+          "sourceRef": "FIXTURE",
+          "rules": [
+            {
+              "type": "leaf", "id": "R_PRI_MARITAL", "field": "marital_status", "operator": "in",
+              "value": ["widowed", "divorced_or_separated"],
+              "reasonCode": "NOT_WIDOWED_OR_SEPARATED",
+              "description": "Widowed, divorced or separated."
+            },
+            {
+              "type": "leaf", "id": "R_PRI_INCOME", "field": "annual_income", "operator": "lte", "value": 120000,
+              "reasonCode": "INCOME_ABOVE_PRIORITY_LIMIT",
+              "description": "Annual household income at most 1,20,000 rupees."
+            }
+          ]
+        },
+        {
+          "type": "group", "id": "R_EXCLUSIONS", "combinator": "none",
+          "reasonCode": "EXCLUDED_CATEGORY",
+          "description": "None of these exclusions may apply.",
+          "sourceRef": "FIXTURE",
+          "rules": [
+            {
+              "type": "leaf", "id": "R_EXCL_GOVT", "field": "occupation", "operator": "eq", "value": "government_employee",
+              "reasonCode": "EXCLUDED_GOVERNMENT_EMPLOYEE",
+              "description": "Government employees are excluded."
+            }
+          ]
+        }
+      ]
+    },
+    "askOrder": ["state", "age", "owns_house", "annual_income", "marital_status", "occupation"]
+  },
+
+  "requiredDocuments": [
+    {
+      "id": "D_ID",
+      "name": "Proof of identity",
+      "description": "A government-issued photo ID. Keep the original with you. Do not share ID numbers or OTPs with anyone who calls you.",
+      "mandatory": true,
+      "howToObtain": "Apply at the nearest government service centre if you do not have one."
+    },
+    {
+      "id": "D_ADDRESS",
+      "name": "Proof of address",
+      "description": "A document showing your current address, such as a ration card or electricity bill.",
+      "mandatory": true
+    },
+    {
+      "id": "D_INCOME",
+      "name": "Income certificate",
+      "description": "A certificate from the local revenue office stating your family's yearly income.",
+      "mandatory": true,
+      "howToObtain": "Apply at the local revenue office or the e-service centre."
+    },
+    {
+      "id": "D_BANK",
+      "name": "Bank passbook",
+      "description": "First page of a bank or post-office passbook in your own name.",
+      "mandatory": true,
+      "howToObtain": "Open a savings account at any bank or post office."
+    },
+    {
+      "id": "D_PHOTO",
+      "name": "Passport-size photograph",
+      "description": "One recent photograph.",
+      "mandatory": true
+    }
+  ],
+
+  "applicationSteps": [
+    { "id": "S1", "order": 1, "text": "Collect all the documents listed.", "channel": "offline" },
+    { "id": "S2", "order": 2, "text": "Go to the official website shown on your screen, or visit the nearest government office.", "channel": "either", "url": "https://example.gov.invalid/housing/apply" },
+    { "id": "S3", "order": 3, "text": "Fill the application form. Ask an officer or a trusted person to help you if needed.", "channel": "either" },
+    { "id": "S4", "order": 4, "text": "Submit the form with your documents and keep the receipt.", "channel": "either" },
+    { "id": "S5", "order": 5, "text": "Use the receipt number to check the status later.", "channel": "either" }
+  ],
+  "helplines": [
+    { "name": "Example Housing Helpline (fictional)", "number": "1800000000", "hours": "Mon-Sat 10:00-17:00" }
+  ],
+
+  "officialApplicationUrl": "https://example.gov.invalid/housing/apply",
+  "officialSourceUrl": "https://example.gov.invalid/housing/guidelines",
+
+  "validity": { "effectiveFrom": "2026-01-01" },
+  "verification": {
+    "verifiedAt": null,
+    "verifiedBy": null,
+    "method": null,
+    "sourceRetrievedAt": null,
+    "sourceContentHash": null,
+    "sourceDescription": "FIXTURE - fictional data for tests. Replace with a real scheme verified against official guidelines."
+  },
+
+  "localizedContent": {},
+  "internalNotes": [
+    "FIXTURE ONLY. Every number, URL and helpline here is fictional (example.gov.invalid never resolves).",
+    "status is 'draft' and verifiedAt is null: runtime serves this only when ALLOW_DRAFT_SCHEMES=true (never in production).",
+    "Exercises: eq, gte, lte, is_false, in, group any, group none, annual_income used by two rules (short-circuit tests).",
+    "Fields needed: state, age, owns_house, annual_income, marital_status, occupation (6)."
+  ],
+
+  "createdAt": "2026-10-01T00:00:00Z",
+  "updatedAt": "2026-10-01T00:00:00Z"
+}
