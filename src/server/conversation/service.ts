@@ -96,7 +96,7 @@ export async function processMessage(
 
   // Try Gemini extraction if API key is configured
   try {
-    if (process.env.GEMINI_API_KEY) {
+    if (process.env.AWS_BEARER_TOKEN_BEDROCK) {
       const geminiResult = await extractIntentAndFacts(
         message,
         language,
@@ -115,7 +115,7 @@ export async function processMessage(
       intent = keywordResult.intent;
     }
   } catch (error) {
-    console.error('Gemini extraction error:', error);
+    console.error('Bedrock extraction error:', error);
     // Continue with keyword extraction fallback
     const keywordResult = extractWithKeywords(message, state.schemeId, language);
     extractedFacts = keywordResult.extractedFacts;
