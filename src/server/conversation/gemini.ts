@@ -39,13 +39,13 @@ const EXTRACT_SCHEMA = {
         'ask_how_to_apply',
         'unsupported_request'
       ],
-      description: 'The user\'s primary intent'
+      description: "The user's primary intent"
     },
     extracted_facts: {
       type: 'object',
-      description: 'Extracted facts from the user\'s utterance',
+      description: 'Extracted facts from the user utterance',
       properties: {
-        age: { type: 'number', description: 'User\'s age in years' },
+        age: { type: 'number', description: "User's age in years" },
         annual_income: { type: 'number', description: 'Annual household income in INR' },
         state: { type: 'string', description: 'Indian state code (2-letter code like TN, KA, etc.)' },
         district: { type: 'string', description: 'District name' },
@@ -63,7 +63,7 @@ const EXTRACT_SCHEMA = {
             'unemployed',
             'other'
           ],
-          description: 'User\'s occupation'
+          description: "User's occupation"
         },
         owns_house: { type: 'boolean', description: 'Does the household own a house?' },
         marital_status: {
@@ -95,7 +95,7 @@ const EXTRACT_SCHEMA = {
     },
     next_question: {
       type: 'string',
-      description: 'Next question to ask the user (in user\'s language)'
+      description: 'Next question to ask the user (in user\'s language). Keep it simple and ask ONE question at a time.'
     },
     response: {
       type: 'string',
@@ -132,37 +132,52 @@ export async function extractIntentAndFacts(
     throw new Error('GEMINI_API_KEY environment variable is required');
   }
 
-  // Construct the prompt
-  const prompt = `You are a helpful assistant for a government scheme eligibility chatbot.
+  // Get scheme details for context
+  const schemeContext = currentSchemeId
+    ? `Current scheme: ${currentSchemeId}. Guide the user toward demonstrating eligibility for this scheme.`
+    : 'You are helping users find and check eligibility for government schemes. The available scheme is a housing assistance program for low-income households. Focus on gathering information that helps determine eligibility.';
 
-Extract intent and facts from the user's message.
-Return a JSON object matching this schema:
-{
-  "intent": "find_scheme" | "eligibility" | "smalltalk" | "restart" | "repeat_last" | "correct_info" | "ask_benefits" | "ask_documents" | "ask_how_to_apply" | "unsupported_request",
-  "extracted_facts": {
-    "age": number | null,
-    "annual_income": number | null,
-    "state": string | null,
-    "district": string | null,
-    "occupation": "farmer" | "agricultural_laborer" | "daily_wage_worker" | "self_employed" | "salaried_private" | "government_employee" | "homemaker" | "student" | "unemployed" | "other" | null,
-    "owns_house": boolean | null,
-    "marital_status": "single" | "married" | "widowed" | "divorced_or_separated" | null
-  },
-  "missing_fields": ["age", "annual_income", "state", "district", "occupation", "owns_house", "marital_status"],
-  "confidence": "high" | "medium" | "low",
-  "matched_scheme_id": string | null,
-  "next_question": "string",
-  "response": "string",
-  "unintelligible": boolean
-}
+  // Construct the prompt with better guidance
+  const prompt = `You are a helpful assistant for a government scheme eligibility chatbot in ${language}.
 
-User message (in ${language}): "${utterance}"
-Current scheme: ${currentSchemeId || 'not yet selected'}
+  The available government scheme is a HOUSING ASSISTANCE program for low-income households. It provides financial help for housing needs to eligible families.
 
-IMPORTANT: Return ONLY valid JSON, no additional text.`;
+  Extract intent and facts from the user's message.
+  
+  IMPORTANT GUIDANCE:
+  1. If user asks for "women's scheme" or similar, understand they want to know about schemes they might qualify for
+  2. The current scheme is HOUSING ASSISTANCE - guide users toward this scheme
+  3. Ask ONE question at a time (age, income, state, etc.)
+  4. If user seems confused about which scheme, explain briefly that we help with housing assistance
+  5. Keep responses simple, supportive, and in the user's language (Tamil, Hindi, or English)
+  
+  Return a JSON object matching this schema:
+  {
+    "intent": "find_scheme" | "eligibility" | "smalltalk" | "restart" | "repeat_last" | "correct_info" | "ask_benefits" | "ask_documents" | "ask_how_to_apply" | "unsupported_request",
+    "extracted_facts": {
+      "age": number | null,
+      "annual_income": number | null,
+      "state": string | null,
+      "district": string | null,
+      "occupation": "farmer" | "agricultural_laborer" | "daily_wage_worker" | "self_employed" | "salaried_private" | "government_employee" | "homemaker" | "student" | "unemployed" | "other" | null,
+      "owns_house": boolean | null,
+      "marital_status": "single" | "married" | "widowed" | "divorced_or_separated" | null
+    },
+    "missing_fields": ["age", "annual_income", "state", "district", "occupation", "owns_house", "marital_status"],
+    "confidence": "high" | "medium" | "low",
+    "matched_scheme_id": string | null,
+    "next_question": "string",
+    "response": "string",
+    "unintelligible": boolean
+  }
+
+  User message (in ${language}): "${utterance}"
+  ${schemeContext}
+
+  IMPORTANT: Return ONLY valid JSON, no additional text.`;
 
   try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
+    const response = await fetch('https://generativelanguages.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -183,41 +198,34 @@ IMPORTANT: Return ONLY valid JSON, no additional text.`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error('Gemini extraction error:', errorText);
+      throw new Error(`Gemini extraction failed: ${response.status}`);
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Parse and validate the JSON response
-    let result: any;
-    try {
-      result = JSON.parse(text);
-    } catch (e) {
-      console.error('Failed to parse Gemini response:', text);
-      throw new Error('Invalid Gemini extraction format');
+    
+    // Parse the JSON response
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    // Clean up potential markdown formatting
+    let jsonStr = content.trim();
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.replace('```json', '').replace('```', '').trim();
+    } else if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace('```', '').trim();
     }
-
-    // Validate required fields
-    if (!result.intent || !result.extracted_facts || !result.missing_fields || typeof result.unintelligible !== 'boolean') {
-      throw new Error('Missing required fields in Gemini response');
-    }
-
-    // Normalize state codes
-    if (result.extracted_facts.state && typeof result.extracted_facts.state === 'string') {
-      result.extracted_facts.state = result.extracted_facts.state.toUpperCase();
-    }
+    
+    const parsed = JSON.parse(jsonStr);
 
     return {
-      intent: result.intent,
-      extractedFacts: result.extracted_facts,
-      missingFields: result.missing_fields || [],
-      confidence: result.confidence as 'high' | 'medium' | 'low',
-      matchedSchemeId: result.matched_scheme_id || undefined,
-      nextQuestion: result.next_question || '',
-      response: result.response || '',
-      unintelligible: result.unintelligible || false
+      intent: parsed.intent || 'unsupported_request',
+      extractedFacts: parsed.extracted_facts || {},
+      missingFields: parsed.missing_fields || [],
+      confidence: parsed.confidence || 'medium',
+      matchedSchemeId: parsed.matched_scheme_id || undefined,
+      nextQuestion: parsed.next_question || '',
+      response: parsed.response || '',
+      unintelligible: parsed.unintelligible || false
     };
   } catch (error) {
     console.error('Gemini extraction error:', error);
@@ -226,114 +234,64 @@ IMPORTANT: Return ONLY valid JSON, no additional text.`;
 }
 
 /**
- * Compose a question for asking a specific field.
- */
-export async function composeQuestion(
-  language: string,
-  fieldName: string,
-  attempt: number
-): Promise<string> {
-  if (!GEMINI_API_KEY) {
-    // Fallback if Gemini is not configured
-    const prompts: Record<string, Record<string, string>> = {
-      en: {
-        state: 'Which state do you live in?',
-        age: 'How old are you?',
-        owns_house: 'Do you own a house?',
-        annual_income: 'What is your annual household income?',
-        marital_status: 'What is your marital status?',
-        occupation: 'What is your occupation?',
-        district: 'Which district do you live in?',
-      },
-      ta: {
-        state: 'நீங்கள் எந்த மாநிலத்தில் வாழ்கிறீர்கள்?',
-        age: 'உங்களுக்கு எத்தனை வயது?',
-        owns_house: 'உங்களுக்கு ஒரு வீடு உள்ளதா?',
-        annual_income: 'உங்கள் ஆண்டு வருமானம் எவ்வளவு?',
-        marital_status: 'உங்கள் திருமண நிலை என்ன?',
-        occupation: 'உங்கள் தொழில் என்ன?',
-        district: 'நீங்கள் எந்த மாவட்டத்தில் வாழ்கிறீர்கள்?',
-      },
-    };
-    return prompts[language]?.[fieldName] || prompts['en'][fieldName] || `What is your ${fieldName}?`;
-  }
-
-  const prompt = `Create a simple question to ask the user for: ${ fieldName }
-
-Requirements:
-- Simple, conversational ${language} question
-- Keep it under 15 words
-
-Return ONLY the question text.`;
-
-  try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7 }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Gemini composition failed');
-    }
-
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `What is your ${fieldName}?`;
-  } catch (error) {
-    console.error('Gemini composition error:', error);
-    const prompts: Record<string, Record<string, string>> = {
-      en: { state: 'Which state do you live in?', age: 'How old are you?', owns_house: 'Do you own a house?', annual_income: 'What is your annual household income?', marital_status: 'What is your marital status?', occupation: 'What is your occupation?', district: 'Which district do you live in?' },
-      ta: { state: 'நீங்கள் எந்த மாநிலத்தில் வாழ்கிறீர்கள்?', age: 'உங்களுக்கு எத்தனை வயது?', owns_house: 'உங்களுக்கு ஒரு வீடு உள்ளதா?', annual_income: 'உங்கள் ஆண்டு வருமானம் எவ்வளவு?', marital_status: 'உங்கள் திருமண நிலை என்ன?', occupation: 'உங்கள் தொழில் என்ன?', district: 'நீங்கள் எந்த மாவட்டத்தில் வாழ்கிறீர்கள்?' },
-    };
-    return prompts[language]?.[fieldName] || prompts['en'][fieldName] || `What is your ${fieldName}?`;
-  }
-}
-
-/**
- * Compose a response based on plan.
+ * Compose a response using Gemini (fallback if direct composition is needed).
  */
 export async function composeResponse(
-  language: string,
-  englishText: string,
-  context: Record<string, any>
+  context: {
+    intent: string;
+    facts: Record<string, any>;
+    missingFields: string[];
+    response: string;
+  },
+  language: string
 ): Promise<string> {
   if (!GEMINI_API_KEY) {
-    return englishText;
+    throw new Error('GEMINI_API_KEY environment variable is required');
   }
 
-  const prompt = `Translate and simplify this message for ${language} interface:
+  const prompt = `Compose a helpful, supportive response in ${language} for a government scheme eligibility chatbot.
 
-"${englishText}"
+  Context:
+  - User intent: ${context.intent}
+  - Facts extracted: ${JSON.stringify(context.facts)}
+  - Missing fields: ${context.missingFields.join(', ')}
+  - Previous response: ${context.response}
 
-Requirements:
-- Keep it simple and conversational
-- Use ${language} script
-- Do not add any new information
-- Keep it under 20 words
+  Keep the response:
+  - Simple and supportive
+  - In the user's language (${language})
+  - Focused on eligibility for government assistance
 
-Return ONLY the translated text.`;
+  Return ONLY the response text, no JSON.`;
 
   try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
+    const response = await fetch('https://generativelanguages.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_API_KEY, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7 }
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          responseModalities: ['TEXT'],
+          temperature: 0.7,
+        }
       })
     });
 
     if (!response.ok) {
-      throw new Error('Gemini composition failed');
+      throw new Error('Composition failed');
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || englishText;
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || context.response;
   } catch (error) {
-    console.error('Gemini composition error:', error);
-    return englishText;
+    console.error('Composition error:', error);
+    // Return the original response if composition fails
+    return context.response;
   }
 }
