@@ -155,6 +155,14 @@ Return ONLY valid JSON.`;
 /**
  * Extract intent and facts using AWS Bedrock Qwen3 32B.
  */
+
+  console.log('[LOG] Bedrock.extractIntentAndFacts called:');
+  console.log('[LOG]   message:', message);
+  console.log('[LOG]   language:', language);
+  console.log('[LOG]   schemeId:', schemeId);
+  console.log('[LOG]   AWS_BEARER_TOKEN_BEDROCK:', !!process.env.AWS_BEARER_TOKEN_BEDROCK);
+  console.log('[LOG]   AWS_REGION:', process.env.AWS_REGION);
+  console.log('[LOG]   BEDROCK_MODEL_ID:', process.env.BEDROCK_MODEL_ID || 'default');
 export async function extractIntentAndFacts(
   message: string,
   language: string,
@@ -222,6 +230,10 @@ export async function extractIntentAndFacts(
     
     const parsed = JSON.parse(jsonStr);
 
+
+    console.log('[LOG] Bedrock.extractIntentAndFacts result:');
+    console.log('[LOG]   intent:', parsed.intent);
+    console.log('[LOG]   extractedFacts:', JSON.stringify(parsed.extracted_facts));
     return {
       intent: parsed.intent || 'unsupported_request',
       extractedFacts: parsed.extracted_facts || {},
